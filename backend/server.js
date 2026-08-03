@@ -26,7 +26,7 @@ app.post('/api/run', async (req, res) => {
     // Send code to the free Piston API
     const response = await axios.post('https://emkc.org/api/v2/piston/execute', {
       language: 'c',
-      version: '*', // Automatically uses the latest C compiler available
+      version: '10.2.0', // Automatically uses the latest C compiler available
       files: [
         {
           content: code
