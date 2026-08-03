@@ -1,89 +1,89 @@
-// ==========================================
-// CONFIGURATION
-// ==========================================
-// Change this to your live Render backend URL once deployed,
-// e.g., 'https://c-compiler-backend-xyz.onrender.com/api'
-// If testing locally, use 'http://localhost:5000/api'
-const API_BASE = 'https://c-compiler-platform.onrender.com/';
+// Ensure this matches your live Render URL
+const API_BASE = 'https://c-compiler-platform.onrender.com/api'; 
 
-const defaultCode = `#include <stdio.h>\n\nint main() {\n    printf("Hello World!\\n");\n    return 0;\n}\n`;
-
-// ==========================================
-// INITIALIZE EDITOR
-// ==========================================
-const editor = CodeMirror.fromTextArea(document.getElementById('codeEditor'), {
-  mode: 'text/x-csrc',
-  theme: 'dracula',
-  lineNumbers: true,
-  tabSize: 4
+// 1. Initialize CodeMirror
+// This now correctly targets the 'code' ID from your HTML
+const editor = CodeMirror.fromTextArea(document.getElementById('code'), {
+    mode: 'text/x-csrc',
+    theme: 'dracula',
+    lineNumbers: true,
+    autoCloseBrackets: true,
+    matchBrackets: true,
+    indentUnit: 4,
+    tabSize: 4
 });
-editor.setValue(defaultCode);
 
+// 2. Set some default starter code
+if (!editor.getValue()) {
+    editor.setValue(`#include <stdio.h>\n\nint main() {\n    printf("Hello, World!\\n");\n    return 0;\n}`);
+}
+
+// 3. Grab all the HTML elements we need to interact with
 const runBtn = document.getElementById('runBtn');
-const outputTerminal = document.getElementById('outputTerminal');
-const stdinInput = document.getElementById('stdinInput');
+const outputEl = document.getElementById('output');
+const stdinEl = document.getElementById('stdin');
+const statusPill = document.getElementById('statusPill');
+const timingInfo = document.getElementById('timingInfo');
 
-// ==========================================
-// EXECUTION LOGIC
-// ==========================================
+// 4. Handle the "Run" button click
 runBtn.addEventListener('click', async () => {
-  outputTerminal.textContent = 'Compiling and executing...';
-  try {
-    const res = await fetch(`${API_BASE}/run`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: editor.getValue(), stdin: stdinInput.value })
-    });
-    const data = await res.json();
-    outputTerminal.textContent = data.output || data.error || 'Execution finished.';
-  } catch (err) {
-    outputTerminal.textContent = 'Error: Cannot reach the backend.';
-  }
-});
+    const sourceCode = editor.getValue();
+    const stdin = stdinEl.value;
 
-// ==========================================
-// ANTI-CHEAT & EXAM ENVIRONMENT FEATURES
-// ==========================================
-let warningCount = 0;
-const MAX_WARNINGS = 3;
-
-// 1. Detect Tab Switching (Page Visibility API)
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) {
-    warningCount++;
-    alert(`⚠️ Warning ${warningCount}/${MAX_WARNINGS}: You switched tabs or minimized the window!`);
-    
-    if (warningCount >= MAX_WARNINGS) {
-      alert("🚨 Test terminated due to multiple violations.");
-      // Lock the editor and remove the run button
-      editor.setOption("readOnly", true);
-      runBtn.disabled = true;
-      document.body.innerHTML = "<h1 style='color:red; text-align:center; margin-top:20%; font-family:sans-serif;'>Test Terminated (Cheating Detected)</h1>";
+    // Don't run if the editor is empty
+    if (!sourceCode.trim()) {
+        outputEl.textContent = 'Please enter some C code to run.';
+        return;
     }
-  }
-});
 
-// 2. Disable Right-Click (Context Menu)
-document.addEventListener('contextmenu', (event) => {
-  event.preventDefault();
-});
+    // Update UI to show loading state
+    runBtn.disabled = true;
+    statusPill.textContent = 'running...';
+    statusPill.className = 'status-pill';
+    statusPill.style.color = '#f1fa8c'; // Yellow for running
+    outputEl.textContent = 'Compiling and executing...';
+    timingInfo.textContent = '';
 
-// 3. Disable Copying and Pasting
-document.addEventListener('copy', (event) => {
-  event.preventDefault();
-  alert("Copying code is disabled during the test.");
-});
+    const startTime = Date.now();
 
-document.addEventListener('paste', (event) => {
-  event.preventDefault();
-  alert("Pasting external code is not allowed!");
-});
-
-// 4. Force Fullscreen on "Run"
-runBtn.addEventListener('click', () => {
-    if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(err => {
-            console.log(`Fullscreen error: ${err.message}`);
+    try {
+        // Send the code to your Render backend
+        // Note: Make sure your backend route matches this (e.g., /execute)
+        const response = await fetch(`${API_BASE}/execute`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                code: sourceCode,
+                input: stdin
+            })
         });
+
+        const data = await response.json();
+        const executionTime = Date.now() - startTime;
+
+        // Display the output and update status
+        if (response.ok) {
+            outputEl.textContent = data.output || 'Execution completed without output.';
+            statusPill.textContent = 'success';
+            statusPill.style.color = '#50fa7b'; // Green for success
+        } else {
+            outputEl.textContent = data.error || data.output || 'An error occurred during execution.';
+            statusPill.textContent = 'error';
+            statusPill.style.color = '#ff5555'; // Red for error
+        }
+
+        // Show how long it took
+        timingInfo.textContent = `executed in ${executionTime}ms`;
+
+    } catch (error) {
+        console.error('Error executing code:', error);
+        outputEl.textContent = 'Network error: Failed to connect to the backend server. Please make sure your Render backend is live.';
+        statusPill.textContent = 'error';
+        statusPill.style.color = '#ff5555';
+    } finally {
+        // Re-enable the run button
+        runBtn.disabled = false;
     }
 });
