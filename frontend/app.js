@@ -2,7 +2,6 @@
 const API_BASE = 'https://c-compiler-platform.onrender.com/api'; 
 
 // 1. Initialize CodeMirror
-// This now correctly targets the 'code' ID from your HTML
 const editor = CodeMirror.fromTextArea(document.getElementById('code'), {
     mode: 'text/x-csrc',
     theme: 'dracula',
@@ -47,29 +46,28 @@ runBtn.addEventListener('click', async () => {
     const startTime = Date.now();
 
     try {
-        // Send the code to your Render backend
-        // Note: Make sure your backend route matches this (e.g., /execute)
-        const response = await fetch(`${API_BASE}/execute`, {
+        // FIXED: Now targets the /run route to match your backend perfectly
+        const response = await fetch(`${API_BASE}/run`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 code: sourceCode,
-                input: stdin
+                stdin: stdin // FIXED: Now properly sending 'stdin' instead of 'input'
             })
         });
 
         const data = await response.json();
         const executionTime = Date.now() - startTime;
 
-        // Display the output and update status
-        if (response.ok) {
-            outputEl.textContent = data.output || 'Execution completed without output.';
+        // Display the output and update status based on your backend's 'success' variable
+        if (data.success) {
+            outputEl.textContent = data.output;
             statusPill.textContent = 'success';
             statusPill.style.color = '#50fa7b'; // Green for success
         } else {
-            outputEl.textContent = data.error || data.output || 'An error occurred during execution.';
+            outputEl.textContent = data.error || 'An error occurred during execution.';
             statusPill.textContent = 'error';
             statusPill.style.color = '#ff5555'; // Red for error
         }
