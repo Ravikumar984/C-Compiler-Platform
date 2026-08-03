@@ -14,7 +14,7 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// ---------- Secure Compile & Run using JDoodle API ----------
+// ---------- Secure Compile & Run using Glot.io (100% Free, No API Key, No OCI limits) ----------
 app.post('/api/run', async (req, res) => {
   const { code, stdin: userStdin } = req.body;
 
@@ -23,27 +23,41 @@ app.post('/api/run', async (req, res) => {
   }
 
   try {
-    // Send code to JDoodle public API
-    const response = await axios.post('https://api.jdoodle.com/v1/execute', {
-      script: code,
-      stdin: userStdin || '',
+    // Send code to Glot.io's public C execution endpoint
+    const response = await axios.post('https://snippets.glot.io/snippets', {
       language: 'c',
-      version: '4', // JDoodle's GCC version for C
-      // Note: JDoodle free tier works without credentials for public endpoints or basic usage, 
-      // but if needed, it uses standard POST payloads.
+      title: 'main.c',
+      files: [
+        {
+          name: 'main.c',
+          content: code
+        }
+      ],
+      stdin: userStdin || ''
+    }, {
+      timeout: 10000 // 10 second timeout guard
     });
 
-    const data = response.data;
+    // Glot returns a snippet ID, now we trigger execution on it
+    const snippetId = response.data.id;
+    const runResponse = await axios.post(`https://snippets.glot.io/snippets/${snippetId}/c`, {
+      stdin: userStdin || ''
+    }, {
+      timeout: 10000
+    });
 
-    // JDoodle returns the output in 'output' field
-    if (data.error) {
-      return res.json({ success: false, error: data.error });
+    const result = runResponse.data;
+
+    // Check if there was a compilation or stderr error
+    if (result.stderr) {
+      return res.json({ success: false, error: result.stderr });
     }
 
-    return res.json({ success: true, output: data.output || 'Program executed with no output.' });
+    // Success! Return stdout
+    return res.json({ success: true, output: result.stdout || result.output || 'Program executed with no output.' });
 
   } catch (err) {
-    console.error('Compiler API Error:', err.message);
+    console.error('Compiler API Error:', err.response?.data || err.message);
     res.status(500).json({ error: 'Failed to reach the free evaluation server.' });
   }
 });
