@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>cc — online C editor</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-glyph">&gt;_</span>
+    <span class="brand-name">cc</span>
+    <span class="brand-tag">online C editor</span>
+  </div>
+
+  <div class="topbar-actions">
+    <input id="snippetTitle" class="title-input" type="text" placeholder="untitled.c" />
+    <button id="saveBtn" class="btn btn-ghost">Save</button>
+    <select id="snippetSelect" class="btn btn-ghost snippet-select">
+      <option value="">Load snippet…</option>
+    </select>
+    <button id="runBtn" class="btn btn-primary">
+      <span class="run-icon">▶</span> Run
+    </button>
+  </div>
+</header>
+
+<main class="workspace">
+  <section class="panel editor-panel">
+    <div class="panel-label">source — main.c</div>
+    <textarea id="code"></textarea>
+  </section>
+
+  <section class="panel side-panel">
+    <div class="stdin-block">
+      <div class="panel-label">stdin</div>
+      <textarea id="stdin" placeholder="Input for scanf() goes here, one value per line…"></textarea>
+    </div>
+
+    <div class="output-block">
+      <div class="panel-label">
+        output
+        <span id="statusPill" class="status-pill status-idle">idle</span>
+      </div>
+      <pre id="output" class="terminal">Press <b>Run</b> to compile and execute your program.
+</pre>
+    </div>
+  </section>
+</main>
+
+<footer class="statusbar">
+  <span>gcc backend</span>
+  <span id="timingInfo"></span>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
