@@ -14,7 +14,7 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// ---------- Secure Compile & Run using Wandbox (100% FREE, NO IP BLOCKS) ----------
+// ---------- Secure Compile & Run using JDoodle API ----------
 app.post('/api/run', async (req, res) => {
   const { code, stdin: userStdin } = req.body;
 
@@ -23,29 +23,24 @@ app.post('/api/run', async (req, res) => {
   }
 
   try {
-    // Send code to the free Wandbox API
-    const response = await axios.post('https://wandbox.org/api/compile.json', {
-      compiler: 'gcc-head', // Always uses the latest GCC version
-      code: code,
+    // Send code to JDoodle public API
+    const response = await axios.post('https://api.jdoodle.com/v1/execute', {
+      script: code,
       stdin: userStdin || '',
-      save: false
+      language: 'c',
+      version: '4', // JDoodle's GCC version for C
+      // Note: JDoodle free tier works without credentials for public endpoints or basic usage, 
+      // but if needed, it uses standard POST payloads.
     });
 
     const data = response.data;
 
-    // 1. Handle Compilation Errors (Syntax errors, missing semicolons, etc.)
-    if (data.compiler_error) {
-      return res.json({ success: false, error: data.compiler_error });
+    // JDoodle returns the output in 'output' field
+    if (data.error) {
+      return res.json({ success: false, error: data.error });
     }
 
-    // 2. Handle Runtime Errors (Segfaults, division by zero, etc.)
-    // Wandbox returns status "0" for success, anything else is an error
-    if (data.status !== "0") {
-      return res.json({ success: false, error: data.program_error || 'Runtime error occurred.' });
-    }
-
-    // 3. Success! Return the output
-    return res.json({ success: true, output: data.program_message || 'Program executed with no output.' });
+    return res.json({ success: true, output: data.output || 'Program executed with no output.' });
 
   } catch (err) {
     console.error('Compiler API Error:', err.message);
