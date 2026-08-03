@@ -14,7 +14,7 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// ---------- Secure Compile & Run using Glot.io (100% Free, No API Key, No OCI limits) ----------
+// ---------- Secure Compile & Run using Piston v2 Official Endpoint ----------
 app.post('/api/run', async (req, res) => {
   const { code, stdin: userStdin } = req.body;
 
@@ -23,10 +23,9 @@ app.post('/api/run', async (req, res) => {
   }
 
   try {
-    // Send code to Glot.io's public C execution endpoint
-    const response = await axios.post('https://snippets.glot.io/snippets', {
+    const response = await axios.post('https://emkc.org/api/v2/piston/execute', {
       language: 'c',
-      title: 'main.c',
+      version: '10.2.0',
       files: [
         {
           name: 'main.c',
@@ -35,30 +34,28 @@ app.post('/api/run', async (req, res) => {
       ],
       stdin: userStdin || ''
     }, {
-      timeout: 10000 // 10 second timeout guard
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      timeout: 15000
     });
 
-    // Glot returns a snippet ID, now we trigger execution on it
-    const snippetId = response.data.id;
-    const runResponse = await axios.post(`https://snippets.glot.io/snippets/${snippetId}/c`, {
-      stdin: userStdin || ''
-    }, {
-      timeout: 10000
-    });
+    const { run, compile } = response.data;
 
-    const result = runResponse.data;
-
-    // Check if there was a compilation or stderr error
-    if (result.stderr) {
-      return res.json({ success: false, error: result.stderr });
+    if (compile && compile.code !== 0) {
+      return res.json({ success: false, error: compile.stderr || compile.output });
     }
 
-    // Success! Return stdout
-    return res.json({ success: true, output: result.stdout || result.output || 'Program executed with no output.' });
+    if (run && run.code !== 0) {
+      return res.json({ success: false, error: run.stderr || run.output || 'Runtime error occurred.' });
+    }
+
+    return res.json({ success: true, output: run?.stdout || 'Program executed with no output.' });
 
   } catch (err) {
-    console.error('Compiler API Error:', err.response?.data || err.message);
-    res.status(500).json({ error: 'Failed to reach the free evaluation server.' });
+    console.error('Compiler API Error Details:', err.response?.data || err.message);
+    const errorMsg = err.response?.data?.message || err.message || 'Failed to reach evaluation server.';
+    res.status(500).json({ error: `Execution error: ${errorMsg}` });
   }
 });
 
