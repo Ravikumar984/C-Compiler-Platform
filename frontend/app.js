@@ -4,7 +4,7 @@
 // Change this to your live Render backend URL once deployed,
 // e.g., 'https://c-compiler-backend-xyz.onrender.com/api'
 // If testing locally, use 'http://localhost:5000/api'
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = 'https://c-compiler-platform.onrender.com/';
 
 const defaultCode = `#include <stdio.h>\n\nint main() {\n    printf("Hello World!\\n");\n    return 0;\n}\n`;
 
